@@ -1,11 +1,150 @@
 $(init);
 var n = 0;
+var liste = [];
+var write = false;
+var wait = false;
 var input;
-var si=-1;
-var listeif;
-var n_instruction = liste_instruction.length;
+var input_value = 0;
+var count_td = 0;
+
+
 function init(){
-	run_instruction(liste_instruction[0]);
+	run_instruction();
+	$('td.input').on('click', function(){
+		var value = $(this).attr('id');
+		if(value == "AC"){
+			instruction("Stop");
+			return false;
+		}
+		if(value == "EXE" && wait){
+			wait = false;
+			run_instruction();
+			return false;
+		}
+		if(write){
+			if(value == "DEL"){
+				if(input_value.length == 1 || input_value == 0)
+					input_value=0;
+				else
+					input_value = input_value.substr(0, input_value.length-1);
+				$("#a"+(count_td+1)).text(parseFloat(input_value));
+				return false;
+			}
+			if(value == "EXE" && input_value!=0){
+				write = false;
+				window[input] = parseFloat(input_value);
+				ecran(input_value);
+				input_value = 0;
+				run_instruction();
+				return false;
+			}
+			if(input_value==0 && value!="POINT")
+				input_value = value;
+			else if(value=="POINT" && parseFloat(input_value) == parseInt(input_value))
+				input_value = input_value + ".";
+			else if(value!="POINT")
+				input_value = input_value + value;
+			
+			(count_td==0)?ecran(parseFloat(input_value)):count_td;
+			$("#a"+(count_td+1)).text(parseFloat(input_value));
+		}
+	});
+}
+function ecran(value){
+	$(check_td()).text(value);
+}
+function run_instruction(){
+	if(liste.length==0){
+		for (var i = n; i < liste_instruction.length; i++) {
+			if(!(write || wait)){
+				fn = window[liste_instruction[i]['fonction']];
+				fn(liste_instruction[i]['params']);
+				n++;
+			}else{
+				break;
+			}
+		};
+	}
+}
+function check_td(){
+	count_td++;
+	if(count_td == 1){
+		$('.ligne').text("");
+		return "#a1";
+	}
+	if(count_td == 7){
+		count_td=0;
+		return "#a7";
+	}
+	return "#a"+count_td;
+}
+
+
+function afficher(params){
+	if(typeof params['text'] != 'undefined'){
+		for (var i = 0; i < params['text'].length; i+=21)
+			ecran(params['text'].substr(i, 21));
+	}
+	if(typeof params['var'] != 'undefined'){
+		var value = 0;
+		console.log(window[params['var']]);
+		if(typeof window[params['var']] != 'undefined')
+			value = window[params['var']];
+		ecran(value);
+		wait = true;
+	}
+	return true;
+}
+
+function lire(params){
+	write =true;
+	input = params['var'];
+	if(typeof params['text'] != 'undefined'){
+		params['text'] = params['text'] + "?";
+		for (var i = 0; i < params['text'].length; i+=21)
+			ecran(params['text'].substr(i, 21));
+	}else
+		ecran("?");
+	return true;
+}
+
+function instruction(params){
+	switch(params){
+		case "Clrtxt":
+			$('.ligne').text("");
+			count_td=0;
+		break;
+		case "Stop":
+			$('.ligne').text("");
+			$("#a1").addClass('right');
+			$("#a1").text('Done');
+			$("#EXE").hide();
+			$("#DEL").hide();
+			$("#AC").hide();
+			$("#POINT").hide();
+			for (var i = 0; i < 10; i++) {
+				$("#"+i).hide();
+			};
+			$("#POINT").hide();
+		break;
+	}
+}
+function calcul(params) { 
+	var calcul = params['calcul'];
+	for (var i = 0; i < params['calcul'].length; i++) {
+		if (/[A-Z]/.test(params['calcul'][i])){
+			calcul = calcul.replace(params['calcul'][i], window[params['calcul'][i]]);
+		}
+	};
+	window[params['var']] = calc(calcul);
+}
+
+
+function calc(calcul) {
+  return new Function('return ' + calcul)();
+}
+/*function init_old(){
+//	run_instruction(liste_instruction[0]);
 	$('#next').on('click', function(){
 		run_instruction();
 		return false;
@@ -25,13 +164,13 @@ function run_instruction(){
 	var k;
 	var liste = liste_instruction;
 	if(si == -1){
-		k=n
+		k=n;
 	}else{
 		k=si;
 		liste = listeif;
 	}
 	console.log(k);
-	if(liste[n]['fonction'] != "set"){
+	if(liste[k]['fonction'] != "set"){
 		console.log(liste);
 		console.log(liste[k]['fonction']);
 		console.log(liste[k]['params']);
@@ -42,24 +181,19 @@ function run_instruction(){
 	}
 	if(si ==-1){
 		n++;
-	}	
-	if(n_instruction == k){
+	}else{
+		si++;
+	}
+	if(n_instruction == n){
 		$("#text-console").append("Execution terminée");
 		instruction("Stop");
 	}
-
-}
-
-function afficher(params){
-	set();
-	if(typeof params['text'] != 'undefined'){
-		$("#text-console").append(params['text'] + "<br />");
-		return false;
+	if(si_max == si){
+		listeif = null;
+		si = -1;
+		si_max = 0;
+		run_instruction();
 	}
-	if(typeof params['var'] != 'undefined'){
-		$("#text-console").append(window[params['var']] + "<br />");
-		return false;
-	}		
 }
 
 function instruction(params){
@@ -76,47 +210,26 @@ function instruction(params){
 	}
 }
 
-function lire(params){
-	set(true);
-	input = params['var'];
-	$("#text-console").append("> ");
-}
-
-function calcul(params) { 
-	set();
-	var calcul = params['calcul'];
-	for (var i = 0; i < params['calcul'].length; i++) {
-		if (/[A-Z]/.test(params['calcul'][i])){
-			calcul = calcul.replace(params['calcul'][i], window[params['calcul'][i]]);
-		}
-	};
-	window[params['var']] = calc(calcul);
-}
-
-function set(write){
-	if(write){
-		$("#next").hide();
-		$("#input").show();
-		$("#send").show();
-	}else{
-		$("#input").hide();
-		$("#send").hide();
-		$("#next").show();
-	}
-}
-
-
-function calc(calcul) {
-  return new Function('return ' + calcul)();
-}
-
-function si(params) {
+function ifelse(params) {
   var condition = params['if']['condition'].split("=");
   si = 0;
+  n++;
   if(window[condition[0]] == parseFloat(condition[1])){
 	listeif = params['if']['instruction'];	
   }else{
   	listeif = params['else'];
   }
-  
+  si_max = listeif.length;
+  run_instruction();
 }
+
+function bouclewhile(params) {
+  //var condition = params['condition'].split("==");
+  //si = 0;
+ // n++;
+  //while(window[condition[0]] == parseFloat(condition[1])){
+//	listeif = params['if']['instruction'];	
+ // }
+  //si_max = listeif.length;
+  //run_instruction();
+}*/

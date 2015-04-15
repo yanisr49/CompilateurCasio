@@ -17,6 +17,7 @@ function init(){
 	condition();
 	set();
 	clearTxt();
+	deleteElement();
 
 
 	$('.plus').on('click', function(){
@@ -41,33 +42,30 @@ function init(){
 function ifThenElse(){
 	$('#ifElse').on('mouseenter', function(){
 		$(elementSelect).before('<button class="plus">+</button>');
-		$(elementSelect).before('<div class="if"></div>');
-		$(elementSelect.previousSibling).append('<h3>Si</h3>');
-		$(elementSelect.previousSibling).append('<input type="text" name="condition" placeholder="Si ...">');
-		$(elementSelect.previousSibling).append('<button class="plus">+</button>');
-		$(elementSelect).before('<div class="then"></div>');
-		$(elementSelect.previousSibling).append('<h3>Alors</h3>');
-		$(elementSelect.previousSibling).append('<button class="plus">+</button>');
-		$(elementSelect).before('<div class="else"></div>');
-		$(elementSelect.previousSibling).append('<h3>Sinon</h3>');
-		$(elementSelect.previousSibling).append('<button class="plus">+</button>');
+		$(elementSelect).before('<div class="ifThenElse"></div>');
+			$(elementSelect.previousSibling).append('<div class="if"></div>');
+				$(elementSelect.previousSibling.firstChild).append('<h3>Si</h3>');
+				$(elementSelect.previousSibling.firstChild).append('<input type="text" name="condition" class="si" placeholder="Si ...">');
+				$(elementSelect.previousSibling.firstChild).append('<button class="plus">+</button>');
+				$(elementSelect.previousSibling.firstChild).append('<button class="delete">X</button>');
+			$(elementSelect.previousSibling).append('<div class="then"></div>');
+				$(elementSelect.previousSibling.lastChild).append('<h3>Alors</h3>');
+				$(elementSelect.previousSibling.lastChild).append('<button class="plus">+</button>');
+			$(elementSelect.previousSibling).append('<div class="else"></div>');
+				$(elementSelect.previousSibling.lastChild).append('<h3>Sinon</h3>');
+				$(elementSelect.previousSibling.lastChild).append('<button class="plus">+</button>');
 		$(elementSelect.previousSibling).addClass('mouseOn');
-		$(elementSelect.previousSibling.previousSibling).addClass('mouseOn');
-		$(elementSelect.previousSibling.previousSibling.previousSibling).addClass('mouseOn');
 	});
 	/* Affichage de la structure If Else Then sur un click */
 	$('#ifElse').on('click', function(){
 		$(elementSelect.previousSibling).removeClass('mouseOn');
-		$(elementSelect.previousSibling.previousSibling).removeClass('mouseOn');
-		$(elementSelect.previousSibling.previousSibling.previousSibling).removeClass('mouseOn');
 		elementSelect = "cliquer";
-		conditionSi();
+		formatageProgramme();
+		deleteElement();
 	});
 	/* Efface la structure If Else si le bouton n'a pas été activé */
 	$('#ifElse').on('mouseleave', function(){
 		if(elementSelect != "cliquer"){
-			$(elementSelect.previousSibling).remove();
-			$(elementSelect.previousSibling).remove();
 			$(elementSelect.previousSibling).remove();
 			$(elementSelect.previousSibling).remove();
 		}
@@ -81,7 +79,7 @@ function whileDo(){
 		$(elementSelect).before('<button class="plus">+</button>');
 		$(elementSelect).before('<div class="while"></div>');
 		$(elementSelect.previousSibling).append('<h3>Tant que</h3>');
-		$(elementSelect.previousSibling).append('<input type="text" name="condition" placeholder="Tant que">');
+		$(elementSelect.previousSibling).append('<input type="text" name="condition" class="tantque" placeholder="Tant que">');
 		$(elementSelect.previousSibling).append('<button class="plus">+</button>');
 		$(elementSelect).before('<div class="do"></div>');
 		$(elementSelect.previousSibling).append('<h3>Faire</h3>');
@@ -94,7 +92,7 @@ function whileDo(){
 		$(elementSelect.previousSibling).removeClass('mouseOn');
 		$(elementSelect.previousSibling.previousSibling).removeClass('mouseOn');
 		elementSelect = "cliquer";
-		conditionSi();
+		formatageProgramme();
 	});
 	/* Efface la structure While si le bouton n'a pas été activé */
 	$('#while').on('mouseleave', function(){
@@ -112,9 +110,9 @@ function forDo(){
 		$(elementSelect).before('<button class="plus">+</button>');
 		$(elementSelect).before('<div class="for"></div>');
 		$(elementSelect.previousSibling).append('<h3>Pour i allant de</h3>');
-		$(elementSelect.previousSibling).append('<input type="number" name="#">');
+		$(elementSelect.previousSibling).append('<input type="number" class="de" name="#">');
 		$(elementSelect.previousSibling).append('<h3>a</h3>');
-		$(elementSelect.previousSibling).append('<input type="number" name="#">');
+		$(elementSelect.previousSibling).append('<input type="number" class="a" name="#">');
 		$(elementSelect).before('<div class="do"></div>');
 		$(elementSelect.previousSibling).append('<h3>Faire</h3>');
 		$(elementSelect.previousSibling).append('<button class="plus">+</button>');
@@ -126,6 +124,7 @@ function forDo(){
 		$(elementSelect.previousSibling).removeClass('mouseOn');
 		$(elementSelect.previousSibling.previousSibling).removeClass('mouseOn');
 		elementSelect = "cliquer";
+		formatageProgramme();
 	});
 	/* Efface la structure For si le bouton n'a pas été activé */
 	$('#for').on('mouseleave', function(){
@@ -275,6 +274,7 @@ function set(){
 	$('#set').on('click', function(){
 		$(elementSelect.previousSibling).removeClass('mouseOn');
 		elementSelect = "cliquer";
+		formatageProgramme();
 	});
 	/* Efface la fonction Set si le bouton n'a pas été activé */
 	$('#set').on('mouseleave', function(){
@@ -347,14 +347,22 @@ function formatageProgramme(){
 		var valeurForm = document.getElementById('formulaire');
 		for(var i=0; i<valeurForm.length; i++)
 		{
-			if(valeurForm.elements[i].className != "plus" && valeurForm.elements[i].id != "data" && valeurForm.elements[i].id != "title" && valeurForm.elements[i].className != "checkbox")
+			if(	valeurForm.elements[i].className != "plus" && valeurForm.elements[i].id != "data" && valeurForm.elements[i].id != "title" &&
+				valeurForm.elements[i].className != "checkbox" && valeurForm.elements[i].className != "delete")
 			{
 				test += valeurForm.elements[i].className.toUpperCase()
 				if(valeurForm.elements[i].value != "CLRTXT") test += ' ';
 				test += valeurForm.elements[i].value;
 				if(i < valeurForm.length-7)
 				{
-					test += '#';
+					if(	valeurForm.elements[i].parentNode.className == "if" || valeurForm.elements[i].parentNode.className == "then" ||
+						valeurForm.elements[i].parentNode.className == "else")
+					{
+						test += '~';
+					}else
+					{
+						test += '#';
+					}
 				}
 			}
 		}
@@ -362,6 +370,21 @@ function formatageProgramme(){
 	});
 }
 
+function deleteElement(){
+	$('.delete').mouseenter(function(){
+		this.style.backgroundColor = "rgba(250,0,0,0.0)";
+		this.parentNode.parentNode.style.backgroundColor = "rgba(250,0,0,0.6)";
+	});
+	$('.delete').mouseleave(function(){
+		this.style.backgroundColor = "#00CED1";
+		this.parentNode.parentNode.style.backgroundColor = "#00CED1";
+	});
+	$('.delete').on('click', function(){
+		this.parentNode.parentNode.previousSibling.remove();
+		this.parentNode.parentNode.remove();
+	});
+}
+/*
 function conditionSi(){
 	$('input[name=condition]').on('focus', function(){
 		var valeur = this.value;
@@ -383,4 +406,4 @@ function conditionSi(){
 			this.style.boxShadow = '0 0 0 white';
 		}
 	});
-}
+}*/

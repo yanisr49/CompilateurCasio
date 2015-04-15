@@ -5,7 +5,7 @@
  * Permet d'analyser le code fourni par l'utilisateur
  * @param String $data Text brut des instructions entrées par l'utilisateur
  * @author Baptiste Meunier baptiste.meunier0@gmail.com
- * @version 1.0
+ * @version 0.6.0--alpha
  **/
 class Decode{
 
@@ -15,12 +15,25 @@ class Decode{
 	private $fonction_match  = array("~^CALCUL (.+)$~" => "calcul",
 							   		 "~^LIRE (.+)$~" => "lire",
 							   		 "~^AFFICHER (.+)$~" => "afficher",
-							   		 "~^SET (.+)$~" => "set"
+							   		 "~^SET (.+)$~" => "set",
+							   		 "~^GOTO (.+)$~" => "sautgoto",
+							   		 "~^LABEL (.+)$~" => "sautlabel",
+							   		 "~^MENU (.+)$~" => "menu",
 							   );   // Liste des fonction
 	private $fonction_simple = array("STOP", "CLRTXT"); // Liste des instructions
 
 	function __construct($data){
 		$inctructions = explode("#", $data);      // On recupere les instuctions une par une (Qui sont sepater par un diese)
+		$this->decode = $this->ajout($inctructions);
+	}
+	/**
+	 * Function ajout
+	 *
+	 * Retourne la liste d'insctuction formaté
+	 * @param Array $inctructions Le tableau brut des insctructions
+	 * @return Array $decode liste d'insctuction formaté
+	 **/
+	private function ajout($inctructions){
 		foreach ($inctructions as $instruction) { // Pour chaque instruction
 			foreach ($this->fonction_simple as $fonction) { // Si c'est une instruction simple
 				if($instruction == $fonction){
@@ -34,11 +47,19 @@ class Decode{
 					break;
 				}
 			}
-			if(substr($instruction, 0, 2)=="IF"){
-				$add = $this->condition($instruction);
+			if(substr($instruction, 0, 2)=="SI"){
+				$si = (substr($instruction, 0, 5)=="SINON")?false:true;
+				$add = $this->ifelse($instruction, $si);
 			}
-			$this->decode[] = $add;
+			if(substr($instruction, 0, 5)=="WHILE")
+				$add = $this->bouclewhile(substr($instruction, 6));
+			if(substr($instruction, 0, 3)=="FOR")
+				$add = $this->bouclefor(substr($instruction, 4));
+			if(substr($instruction, 0, 7)=="DOWHILE")
+				$add = $this->bouclefor(substr($instruction, 8));
+			$decode[] = $add;
 		}
+		return $decode;
 	}
 	/**
 	 * Function varAdd
@@ -63,59 +84,112 @@ class Decode{
 	 * @return void
 	 **/
 	private function instruction($fonction){
-			$this->decode[] = array('fonction' => 'instruction',
+			return array('fonction' => 'instruction',
 									'params' => ucfirst(strtolower($fonction)));
 	}
-	private function condition($params){
+	/**
+	 * Function sautgoto
+	 *
+	 * Ajoute l'instruction Goto à la liste des insctructions
+	 * @param string $saut le type de saut
+	 * @return Array Tableau des parametre du saut
+	 **/
+	private function sautgoto($saut){
+			return array('fonction' => 'saut',
+						'params' => array("goto" => $saut));
+	}
+	/**
+	 * Function menu
+	 *
+	 * Ajoute l'instruction menu à la liste des insctructions
+	 * @param string $params les parametre du menu
+	 * @return Array Tableau des parametres du menu
+	 **/
+	private function menu($params){
+			$params = explode("~", $params);
+			$titre = $params[0];
+			$menu = array();
+			unset($params[0]);
+			for($i=1; $i < count($params); $i=$i+2){
+				$menu[] = array('go' => $params[$i], 'nom' => $params[$i+1]);
+			}
+			return array('fonction' => 'menu',
+						'params' => array("titre" => $titre, 'menu' => $menu));
+	}
+	/**
+	 * Function sautlabel
+	 *
+	 * Ajoute l'instruction Label à la liste des insctructions
+	 * @param id $saut le type de saut
+	 * @return Array Tableau des parametre du saut
+	 **/
+	private function sautlabel($saut){
+			return array('fonction' => 'saut',
+						'params' => array("label" =>  $saut));
+	}
+	/**
+	 * Function ifelse
+	 *
+	 * Ajoute l'instruction if/else à la liste des insctructions
+	 * @param String $params les texte brut Boolean $si true si on est dans un if sinon false
+	 * @return Array $add Tableau des parametre du if
+	 **/
+	private function ifelse($params, $si){
+		$params = ($si==true)?substr($params, 3):substr($params, 6);
 		$params = explode("~", $params);
-		$params[0] = explode(" ", $params[0]);
-		$condition = $params[0][1];
+		$add = array('fonction' => 'ifelse');
+		if($si == true){
+			$conditions = explode(":", $params[0]);
+			unset($params[0]);
+			$add['params']['conditions'] = $conditions;
+			$add['params']['si'] = $this->ajout($params);
+		}else{
+			$add['params']['sinon'] = $this->ajout($params);
+		}
+		return $add;
+	}
+	/**
+	 * Function bouclewhile
+	 *
+	 * Ajoute l'instruction while à la liste des insctructions
+	 * @param String $params les texte brut
+	 * @return Array $add Tableau des parametre du while
+	 **/
+	private function bouclewhile($params){
+		$params = explode("&", $params);
+		$conditions = explode(":", $params[0]);
 		unset($params[0]);
-		foreach ($params as $k => $instruc) { // Pour chaque instruction
-			unset($params[$k]);
-			if($instruc == "ELSE"){
-				break 1;
-			}
-			foreach ($this->fonction_simple as $fonction) { // Si c'est une instruction simple
-				if($instruc == $fonction){
-					$if[] = $this->instruc($fonction); // Ajouts de l'instructions
-					break;
-				}
-			}
-			foreach ($this->fonction_match as $match => $fonction) { // Si c'est une fonction complexe
-				if(preg_match($match, $instruc, $find)){
-					$if[] = $this->$fonction($find[1]); // Ajouts de l'instructions
-					break;
-				}
-			}
-			if(substr($instruc, 0, 2)=="IF"){
-				//$this->condition($instruc);
-			}
-		}
-		foreach ($params as $instruc) { // Pour chaque instruction
-			if($instruc == "ELSE"){
-				break 1;
-			}
-			foreach ($this->fonction_simple as $fonction) { // Si c'est une instruction simple
-				if($instruc == $fonction){
-					$else[] = $this->instruc($fonction); // Ajouts de l'instructions
-					break;
-				}
-			}
-			foreach ($this->fonction_match as $match => $fonction) { // Si c'est une fonction complexe
-				if(preg_match($match, $instruc, $find)){
-					$else[] = $this->$fonction($find[1]); // Ajouts de l'instructions
-					break;
-				}
-			}
-			if(substr($instruc, 0, 2)=="IF"){
-				//$this->condition($instruc);
-			}
-		}
-			return array('fonction' => 'si',
-						 'params' => array('if' =>	array('condition' => $condition,
-														'instruction' => $if),
-						 					'else' => $else));
+		$add = array('fonction' => 'bouclewhile', 'params' => array('conditions' => $conditions, 'instructions' => $this->ajout($params)));
+		return $add;
+	}
+	/**
+	 * Function bouclefor
+	 *
+	 * Ajoute l'instruction for à la liste des insctructions
+	 * @param String $params les texte brut
+	 * @return Array $add Tableau des parametre du while
+	 **/
+	private function bouclefor($params){
+		$params = explode("%", $params);
+		$conditions = explode(":", $params[0]);
+		unset($params[0]);
+		$add = array('fonction' => 'bouclefor', 'params' => array('pour' => $conditions[0],
+		'a' => $conditions[1], 'step' => $conditions[2], 'instructions' => $this->ajout($params)));
+		return $add;
+	}
+	/**
+	 * Function boucledo
+	 *
+	 * Ajoute l'instruction do à la liste des insctructions
+	 * @param String $params les texte brut
+	 * @return Array $add Tableau des parametre du while
+	 **/
+	private function boucledo($params){
+		$params = explode("$", $params);
+		$conditions = explode(":", $params[0]);
+		unset($params[0]);
+		$add = array('fonction' => 'boucledo', 'params' => array('conditions' => $conditions, 'instructions' => $this->ajout($params)));
+		return $add;
 	}
 	/**
 	 * Function afficher
